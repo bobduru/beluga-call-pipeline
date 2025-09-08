@@ -98,7 +98,7 @@ If this is not done, the pipeline will still work with a default sensitivity of 
 
 ## Running the Pipeline on Long Periods of Recordings
 
-To run the pipeline on days or weeks of PAM data, we've developed a parallel processing pipeline with preloading in `run_pipeline_parallel.py`, which must be called directly from the terminal.
+To run the pipeline on days or weeks of PAM data, we've developed a parallel processing pipeline with preloading in `run_pipeline_parallel.py`, which must be called directly from the terminal with the virtual env activated.
 
 You can call it like this from the root directory of the repository, specifying the input directory and output directory. For the input directory, it will look for `.wav` files and also check in the output folder if some files have already been processed and filter them out.
 

@@ -119,39 +119,6 @@ def get_class_weights(df, label_name = "HF_Call_Code"):
     class_weights = torch.tensor(weights.values, dtype=torch.float32)
     return class_weights
 
-def setup_dataloaders(train_data, val_data, test_data,processed_files_dir, call_type_label_column="HF_Call_Code", whistle_label_column="Whistle", batch_size=32, resize_1_5s=False):
-    train_dataset = MultiHeadedDataset(
-        train_data,
-        processed_files_dir=processed_files_dir,
-        call_type_label_column=call_type_label_column,
-        whistle_label_column=whistle_label_column,
-        resize_1_5s=resize_1_5s,
-        train=True
-    )
-    val_dataset = MultiHeadedDataset(
-        val_data,
-        processed_files_dir=processed_files_dir,
-        call_type_label_column=call_type_label_column,
-        whistle_label_column=whistle_label_column,
-        resize_1_5s=resize_1_5s
-    )
-    test_dataset = MultiHeadedDataset(
-        test_data,
-        processed_files_dir=processed_files_dir,
-        call_type_label_column=call_type_label_column,
-        whistle_label_column=whistle_label_column,
-        resize_1_5s=resize_1_5s
-    )
-    
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-    return train_loader, val_loader, test_loader
-
-
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns

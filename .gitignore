@@ -2,7 +2,6 @@ cuda
 env
 .venv
 __pycache__
-models
 models_test
 aves-base-bio.torchaudio.pt
 aves-base-bio.pt
