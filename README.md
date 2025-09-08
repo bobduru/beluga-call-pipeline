@@ -7,7 +7,7 @@ This project presents a deep learning pipeline for real-time classification of b
 - **Production pipeline** capable of processing single WAV files for quick testing or months of PAM data in parallel
 
 
-All technical details are available in the accompanying `paper.pdf`.
+All technical details are available on the [preprint](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5451095)
 
 ---
 
@@ -59,14 +59,6 @@ for parent in [current_path] + list(current_path.parents):
 %load_ext autoreload
 %autoreload 2
 ```
-
----
-
-## Data
-
-The data used in this project to train the models is owned by the LISSE Lab in Quebec. To get access to it, please contact [projetbruit2020@gmail.com](mailto:projetbruit2020@gmail.com).
-
----
 
 ## Project Structure
 
@@ -125,3 +117,19 @@ When the pipeline has processed all files in `input_dir`, it will generate two f
 - **`_merged_results.csv`**: Contains all the CSV files merged together
 - **`_continuous_segments.csv`**: Contains the start and end times of continuous segments in the PAM data, and shows any gaps between files (which could be due to hydrophone maintenance or other reasons). This file provides a quick overview of data continuity and can be useful for downstream analysis.
 
+--- 
+
+
+## Running Training Experiments
+
+### 1. Accessing Training Data
+
+The data used in this project to train the models is owned by the LISSE Lab in Quebec. To get access to it, please contact [projetbruit2020@gmail.com](mailto:projetbruit2020@gmail.com).
+
+### 2. Running Experiments
+
+Once you have access to the training data, you can place it in a `data` folder in the root directory and go to `training/run_experiments.ipynb` to run all the experiments from the paper using the nested cross-validation method described. The file also contains code to directly train a final model on all data for production use.
+
+### 3. Analyzing Results
+
+The `training/results_analysis` folder contains the code to generate the tables presented in the paper.
