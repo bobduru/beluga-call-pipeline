@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 from models.quant_mobilenet import load_mobilenet_v3_quant_from_file
-from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from data_preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 
 import matplotlib.patches as patches
 import pandas as pd

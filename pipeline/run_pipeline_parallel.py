@@ -16,7 +16,7 @@ for parent in [current_path] + list(current_path.parents):
 
 
 from models.quant_mobilenet import load_mobilenet_v3_quant_from_file
-from preprocessing.spectrogram.spectrogram_generator import SpectrogramGenerator
+from data_preprocessing.spectrogram.spectrogram_generator import SpectrogramGenerator
 
 import multiprocessing
 import time

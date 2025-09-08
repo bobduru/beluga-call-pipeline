@@ -2,15 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import KFold, train_test_split
-
+from sklearn.model_selection import train_test_split
 import torch
-import torch.optim as optim
-import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
-from torchmetrics.classification import F1Score, Accuracy, MulticlassConfusionMatrix, Precision, Recall
-
-
 import json
 
 
@@ -324,7 +317,7 @@ def display_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', 
     print("\nClassification Report:")
     print(classification_report(y_true, y_pred, zero_division=0))
 
-from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from data_preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 import librosa
 
 def plot_combined_spectrograms(audio, sr, title="title", clip_number=None):

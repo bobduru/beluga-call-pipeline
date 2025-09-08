@@ -6,7 +6,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.patches as patches
-from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from data_preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 
 
 def plot_pipeline_outputs_on_spects(
@@ -251,7 +251,7 @@ def plot_pipeline_outputs_on_spects(
         print("\n========================\n")
 
 
-def check_pipeline_performance(
+def analyze_pipeline_performance(
     long_audio,
     sample_rate,
     results_df,

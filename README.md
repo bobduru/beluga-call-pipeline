@@ -76,7 +76,7 @@ The folders and files should be mostly self-explanatory. Most of the core logic 
 
 ## Running the Pipeline
 
-The final model is only 320 KB, so the model weights are included directly in the repository.
+The model weights are included directly in the repository since the unquantized model is only 886 KB. For optimal performance during offline analysis, we recommend using this unquantized version. The model can be quantized down to 320 KB for deployment on edge devices.
 
 To get started with using the pipeline, go to `pipeline/run_pipeline.ipynb`. This notebook demonstrates the basic functionality of the pipeline and includes visualization tools that can be useful for evaluating the pipeline's performance on your files. Thanks to the small model size and other optimizations, depending on your machine, we've been able to process 2-hour WAV files in 20-60 seconds.
 
