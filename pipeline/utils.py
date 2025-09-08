@@ -1,5 +1,5 @@
 
-from spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 from pipeline.pipeline import get_hydrophone_model
 from pathlib import Path
 import os

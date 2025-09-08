@@ -357,7 +357,7 @@ def display_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', 
     print("\nClassification Report:")
     print(classification_report(y_true, y_pred, zero_division=0))
 
-from spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 import librosa
 
 def plot_combined_spectrograms(audio, sr, title="title", clip_number=None):

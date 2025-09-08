@@ -6,7 +6,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.patches as patches
-from spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 
 
 def plot_pipeline_outputs_on_spects(

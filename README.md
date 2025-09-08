@@ -1,22 +1,25 @@
-# Automated Classification of Beluga Whale Diphonic Vocalizations Using Multi-Output ResNet
+# Real-Time Acoustic Monitoring: Lightweight Beluga Call Classification Across Habitats
 
-### This project explores the application of Passive Acoustic Monitoring (PAM) combined with deep learning techniques to enhance the real-time classification of beluga whale vocalizations in the St. Lawrence Estuary. Using a Multi-Output ResNet model, the goal is to classify both high-frequency calls and low-frequency whistles.
+This project presents a deep learning pipeline for real-time classification of beluga whale vocalizations using Passive Acoustic Monitoring (PAM) data from the St. Lawrence Estuary. The repository contains:
 
-### We've also developed an automatic pipeline that first detects regions of interest (ROIs), then uses the call type model to predict which type of call is present.
+- **Training experiments** for model optimization and cross-site generalization
+- **Lightweight model** (320 KB) optimized for deployment, achieving state-of-the-art performance in classifying overlapping beluga calls (F1-score: 0.93)
+- **Production pipeline** capable of processing single WAV files for quick testing or months of PAM data in parallel
+
+
+All technical details are available in the accompanying `paper.pdf`.
 
 ---
 
-### Installation
+## Installation
 
 To install the necessary dependencies for this project, follow these steps:
 
-1. Make sure Python is properly installed on your machine.
+1. Ensure Python is properly installed on your machine.
 
 2. Create and activate a virtual environment:
    ```bash
    python -m venv .venv
-   ```
-   ```bash
    source .venv/bin/activate
    ```
 
@@ -27,13 +30,7 @@ To install the necessary dependencies for this project, follow these steps:
 
 ---
 
-### Data
-
-The data used in this project is owned by the LISSE Lab in Quebec. To access it, please contact [projetbruit2020@gmail.com](mailto:projetbruit2020@gmail.com).
-
----
-
-### Setup
+## Setup
 
 After installing the dependencies, create a `.env` file in the root directory and set:
 
@@ -41,7 +38,7 @@ After installing the dependencies, create a `.env` file in the root directory an
 PROJECT_ROOT=/your/root/dir/beluga-call-pipeline
 ```
 
-This is then used in each `.ipynb` file to make sure imports work correctly across the project, using this snippet:
+This is used in each `.ipynb` file to ensure imports work correctly across the project, using this snippet:
 
 ```python
 from dotenv import load_dotenv
@@ -65,34 +62,25 @@ for parent in [current_path] + list(current_path.parents):
 
 ---
 
-### Basic Tips for the Code
+## Data
 
-The folders and files should be mostly self-explanatory. Core logic is in `.py` files, while most of the main runs and tests are done in `.ipynb` notebooks.
-
-Files ending in `_old` or `_test` can be ignored for now — I left them in case I need to refer back to them later.
-
-- The `training` folder is for training and running experiments with the call type model. Each experiment has a corresponding folder in `results`, with an `analysis.ipynb` to visualize the outcome.
-- The `preprocessing` folder is to preprocess the raw audios into spectrograms to be used to train the call type model.
-- The `spectrogram` folder contains the single class instance `SPECT_GENERATOR`, that is used through out the code to generate the spectrograms, there is also the `HYDROPHONE_SENSITIVITY` to load the sensitivities of known hydrophones.
-- The `pipeline` folder contains the pipeline logic.
-- The `ROI` folder contains the ROI logic.
-- The `abundance` folder still needs cleaning.
-
-- The `AVES` folder is outdated — tests were run but results weren’t promising. Kept for reference.
-- The `custom_resnet` folder includes a ResNet implementation used by Xavier Secheresse and Tristan Cotillard. I left it here for reference, but I mainly used the models from PyTorch.
+The data used in this project to train the models is owned by the LISSE Lab in Quebec. To get access to it, please contact [projetbruit2020@gmail.com](mailto:projetbruit2020@gmail.com).
 
 ---
 
-### Running the Pipeline
+## Project Structure
 
-There are two main functions for running the pipeline:
-- `run_pipeline_single_audio`: to run the pipeline on a single audio file. I recommend trying this first with `debug=True` to see how it operates.
+The folders and files should be mostly self-explanatory. Most of the core logic and functions are in `.py` files, while we've kept `.ipynb` notebooks to run the main experiments and the pipeline, allowing for quick testing and familiarization with the code.
 
-- `run_multi_file_pipeline`: to run the pipeline on a folder containing multiple files.
+---
 
-Check out `run.ipynb` for an example of how to use them. I recommend creating your own `run_<name>.ipynb` files to organize your tests.
+## Running the Pipeline
 
-**Note:** If you're working with audio files recorded by a hydrophone model that isn't listed in `./spectrogram/hydrophones_sensitivity.json`, you need to manually add its sensitivity value.
+The final model is only 320 KB, so the model weights are included directly in the repository.
+
+To get started with using the pipeline, go to `pipeline/run_pipeline.ipynb`. This notebook demonstrates the basic functionality of the pipeline and includes visualization tools that can be useful for evaluating the pipeline's performance on your files. Thanks to the small model size and other optimizations, depending on your machine, we've been able to process 2-hour WAV files in 20-60 seconds.
+
+**Note:** The spectrogram generation uses the sensitivity of the hydrophone to get exact dB values in the pipeline for noise calculation. If you're working with audio files recorded by a hydrophone model that isn't listed in `./spectrogram/hydrophones_sensitivity.json`, you need to manually add its sensitivity value.
 
 To do so:
 
@@ -105,8 +93,35 @@ To do so:
        "6872": -177.6
    }
    ```
+   
+If this is not done, the pipeline will still work with a default sensitivity of -170, but the resulting dB values won't be exact.
 
-This value is necessary for converting the spectrograms into dB re 1 µPa. If this is not done things will still work as a default sensitivity of -170 will be set, but the resulting dB values of the pipeline won't be exact.
+## Running the Pipeline on Long Periods of Recordings
 
+To run the pipeline on days or weeks of PAM data, we've developed a parallel processing pipeline with preloading in `run_pipeline_parallel.py`, which must be called directly from the terminal.
 
+You can call it like this from the root directory of the repository, specifying the input directory and output directory. For the input directory, it will look for `.wav` files and also check in the output folder if some files have already been processed and filter them out.
+
+Depending on your machine, you can change `num_processes`, which defines how many copies of the pipeline will work simultaneously on different files. We have found that anything from 4 to 8 works quite well, with the main bottleneck being loading the large WAV files from a single HDD drive.
+
+To first test out the pipeline, you can also add `--max_files 16` at the end to make sure it works:
+
+```bash
+python ./pipeline/run_pipeline_parallel.py --input_dir E:/2022/ --output_dir ./pipeline/outputs/BSM_2022 --num_processes 4
+```
+
+Thanks to the speed and parallelization, it is possible to process months of continuous PAM data in a few days.
+
+### Pipeline Outputs
+
+When using the parallel pipeline, the results are automatically saved in the selected `output_dir`. For each `.wav` file processed, two corresponding files will be generated:
+
+1. **CSV file**: Contains raw outputs with a timestamp every second, including the probability of each call type and other noise and SNR values for each one-second window. (Note: These parameters are still in development and are not part of the paper. The main trustworthy outputs are the call classifications.)
+
+2. **JSON file**: Contains a basic summary of the processed file, including processing time, number of each call type detected, etc.
+
+When the pipeline has processed all files in `input_dir`, it will generate two final files:
+
+- **`_merged_results.csv`**: Contains all the CSV files merged together
+- **`_continuous_segments.csv`**: Contains the start and end times of continuous segments in the PAM data, and shows any gaps between files (which could be due to hydrophone maintenance or other reasons). This file provides a quick overview of data continuity and can be useful for downstream analysis.
 

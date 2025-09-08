@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 from models.quant_mobilenet import load_mobilenet_v3_quant_from_file
-from spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
+from preprocessing.spectrogram.spectrogram_generator import SPECT_GENERATOR, HYDROPHONE_SENSITIVITY
 
 import matplotlib.patches as patches
 import pandas as pd
@@ -515,7 +515,7 @@ def run_pipeline_batched_long_spects(
 
     We have developed a method to compute the noise profile and snr for each window using past windows with no calls detected by the model.
     This is still in development and can be improved.
-    
+
     
     Args:
         audio: Audio samples array

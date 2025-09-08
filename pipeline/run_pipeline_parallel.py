@@ -16,7 +16,7 @@ for parent in [current_path] + list(current_path.parents):
 
 
 from models.quant_mobilenet import load_mobilenet_v3_quant_from_file
-from spectrogram.spectrogram_generator import SpectrogramGenerator
+from preprocessing.spectrogram.spectrogram_generator import SpectrogramGenerator
 
 import multiprocessing
 import time
@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     merge_multi_file_pipeline_outputs(args.output_dir)
     find_continuous_segments(args.output_dir)
-    
+
 
 
 # python ./pipeline/run_parallel_overlap.py --input_dir E:/2022/ --output_dir ./pipeline/overlap_outputs/BSM_2022 --num_processes 4 --max_files 16
