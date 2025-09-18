@@ -875,7 +875,7 @@ def run_multi_file_pipeline_with_prefetching(
         seconds_to_process = seconds_to_process_if_debugging
 
     device = get_best_device()
-    model = load_mobilenet_v3_quant_from_file("C:/Users/Admin/Desktop/Emmanuel/save-the-belugas/pipeline/model_weights/mobile_net_8_layers_qat.pt", n_layers=8)
+    model = load_mobilenet_v3_quant_from_file("./models/weights/mobile_net_8_layers_qat.pt", n_layers=8)
 
 
     model.to(device)

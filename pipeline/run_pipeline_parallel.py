@@ -108,12 +108,6 @@ if __name__ == "__main__":
     merge_multi_file_pipeline_outputs(args.output_dir)
     find_continuous_segments(args.output_dir)
 
+# python ./pipeline/run_pipeline_parallel.py --input_dir /Volumes/UQO_2024/BSM_2021 --output_dir ./pipeline/outputs/BSM_2021 --num_processes 2 --max_files 16
 
-
-# python ./pipeline/run_parallel_overlap.py --input_dir E:/2022/ --output_dir ./pipeline/overlap_outputs/BSM_2022 --num_processes 4 --max_files 16
-# python ./pipeline/run_parallel_overlap.py --input_dir E:/2018/ --output_dir ./pipeline/overlap_outputs/BSM_2018 --num_processes 4 --max_files 16
-# python ./pipeline/run_parallel_overlap.py --input_dir E:/2023/ --output_dir ./pipeline/overlap_outputs/BSM_2023 --num_processes 4 --max_files 16
-
-# Finished processing 16 files with 4 processes in 130.83 seconds.
-# Finished processing 16 files with 8 processes in 274.67 seconds.
 
