@@ -15,7 +15,7 @@ All technical details are available on the [preprint](https://papers.ssrn.com/so
 
 To install the necessary dependencies for this project, follow these steps:
 
-1. Ensure Python is properly installed on your machine.
+1. Ensure Python (use 3.12.8)  is properly installed on your machine.
 
 2. Create and activate a virtual environment:
    ```bash
