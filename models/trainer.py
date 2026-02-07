@@ -216,7 +216,7 @@ class MultilabelTrainer:
                 sample_log = {
                     'Filename': metadata['Filename'][i],
                     'Site': metadata['Site'][i],
-                    'N_HF_Call_Types': metadata['N_HF_Call_Types'][i].item()
+                    # 'N_HF_Call_Types': metadata['N_HF_Call_Types'][i].item()
                 }
                 probs = torch.sigmoid(outputs[i])
                 predictions = (probs >= 0.5).float()
