@@ -50,7 +50,8 @@ def train_model(
         use_quantization=False,
         save_models=False,
         base_dir=None,
-        compute_sites_metrics=True
+        # compute_sites_metrics=True,
+        test_cols_metrics=["Site"]
 ):
 
     """
@@ -229,22 +230,23 @@ def train_model(
 
         training_details["other_tests"]["quantized"] = quant_test_results
 
-    if compute_sites_metrics:   
+    # if compute_sites_metrics:   
+    for test_col in test_cols_metrics:
         #Here we are evaluating the model on each site in the test set
 
-        sites = list(set(labels_df["Site"].unique()))
+        test_vals = list(set(labels_df["test_col"].unique()))
         test_df = labels_df[labels_df["test_fold_idx"] == fold_idx]
 
-        for site in sites:
-            site_test_df = test_df[test_df["Site"] == site]
+        for test_val in test_vals:
+            test_val_df = test_df[test_df["test_col"] == test_val]
 
-            if len(site_test_df) == 0:
-                print(f"No data for site {site}, skipping.")
+            if len(test_val_df) == 0:
+                print(f"No data for {test_col} {test_val}, skipping.")
                 continue
 
-            site_test_loader = DataLoader(
+            test_val_loader = DataLoader(
                 MultiLabelDataset(
-                    site_test_df,
+                    test_val_df,
                     processed_spects_dir=processed_spects_dir,
                     label_columns=label_columns,
                     train=True,
@@ -254,19 +256,20 @@ def train_model(
                 shuffle=False
             )
 
-            print(f"Created test dataloader for site: {site} with {len(site_test_df)} samples")
+            print(f"Created test dataloader for {test_col} {test_val} with {len(test_val_df)} samples")
 
-            test_results, test_predictions_log = trainer.test_epoch( 0, site_test_loader, loss_fn_gpu, metrics_gpu, phase="Test on site " + site, keep_logs=True)
+            test_results, test_predictions_log = trainer.test_epoch( 0, test_val_loader, loss_fn_gpu, metrics_gpu, phase="Test on " + test_col + " " + test_val, keep_logs=True)
 
             test_prediction_df = create_predictions_dataframe(test_predictions_log, label_columns)
-            test_prediction_df.to_csv(run_dir + f"{site}_test_predictions.csv", index=False)
+            test_prediction_df.to_csv(run_dir + f"{test_col}_{test_val}_test_predictions.csv", index=False)
 
-            training_details["other_tests"][site] = test_results
+            test_name = test_col + "_" + test_val
+            training_details["other_tests"][test_name] = test_results
             
             if use_quantization:  
                 trainer_cpu = MultilabelTrainer(quant_model, device=cpu, labels_mapping=label_columns)
-                quant_test_results, _ = trainer_cpu.test_epoch( 0, site_test_loader, loss_fn_cpu, metrics_cpu, phase="(Quantized) Test on site " + site, keep_logs=True)
-                training_details["other_tests"][f"{site}_quantized"] = quant_test_results
+                quant_test_results, _ = trainer_cpu.test_epoch( 0, test_val_loader, loss_fn_cpu, metrics_cpu, phase="(Quantized) Test on " + test_col + " " + test_val, keep_logs=True)
+                training_details["other_tests"][f"{test_name}_quantized"] = quant_test_results
 
     save_json(training_details, run_dir + "training_details.json")
 
