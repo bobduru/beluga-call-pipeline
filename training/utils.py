@@ -119,7 +119,7 @@ from sklearn.metrics import multilabel_confusion_matrix, classification_report
 
 def test_report(
     results_df,
-    class_names=["ECHO", "HFPC", "CC", "Whistle"],
+    class_names=["ECHO", "HFPC", "BBPC", "Whistle"],
     filter_absent=True,
     show_cms=False,
     add_abs_column=True,
@@ -218,7 +218,7 @@ def load_training_details(runs_list, base_path="./"):
         return training_details[runs_list[0]] if runs_list[0] in training_details else None
     return training_details
 
-def create_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', 'CC', 'Whistle']):
+def create_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', 'BBPC', 'Whistle']):
     """
     Creates a confusion matrix treating each unique combination of calls as a separate class.
     
@@ -271,7 +271,7 @@ def create_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', '
     
     return conf_matrix, labels_dict
 
-def display_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', 'CC', 'Whistle'], figsize=(8, 6)):
+def display_multiclass_confusion_matrix(results_df, call_types=['ECHO', 'HFPC', 'BBPC', 'Whistle'], figsize=(8, 6)):
     """
     Displays a confusion matrix treating each unique combination of calls as a separate class.
     Each cell shows both the percentage and raw count.
@@ -382,14 +382,14 @@ def calculate_detection_f1(test_predictions_df):
     test_predictions_df['call_presence_true'] = (
         (test_predictions_df['ECHO_true'] == 1) | 
         (test_predictions_df['HFPC_true'] == 1) | 
-        (test_predictions_df['CC_true'] == 1) | 
+        (test_predictions_df['BBPC_true'] == 1) | 
         (test_predictions_df['Whistle_true'] == 1)
     ).astype(int)
 
     test_predictions_df['call_presence_pred'] = (
         (test_predictions_df['ECHO_pred'] == 1) | 
         (test_predictions_df['HFPC_pred'] == 1) | 
-        (test_predictions_df['CC_pred'] == 1) | 
+        (test_predictions_df['BBPC_pred'] == 1) | 
         (test_predictions_df['Whistle_pred'] == 1)
     ).astype(int)
 

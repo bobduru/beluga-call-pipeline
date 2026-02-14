@@ -22,6 +22,7 @@ class ResnetMultilabel(nn.Module):
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
+        
 
         print(f"Loading resnet18 model on {self.device}")
         self.resnet = models.resnet18(pretrained=pretrained)
