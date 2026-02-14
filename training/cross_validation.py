@@ -291,7 +291,8 @@ def run_cross_val(
     save_models=False,
     use_quantization=False, 
     results_dir="./final_results",
-    compute_sites_metrics=True
+    test_cols_metrics=["Site"],
+    fold_exclusive_col="labeled_snippet_filename"
 ):
     """""
     
@@ -368,7 +369,7 @@ def run_cross_val(
 
 
     # Create test fold indices where each site has the same number of test samples
-    labels_df = create_test_fold_indices(labels_df, n_splits)
+    labels_df = create_test_fold_indices(labels_df, n_splits, group_col=fold_exclusive_col)
 
 
     for fold_idx in range(n_splits):
@@ -400,7 +401,7 @@ def run_cross_val(
             training_config=training_config,
             use_quantization=use_quantization,
             save_models=save_models,
-            compute_sites_metrics=compute_sites_metrics
+            test_cols_metrics=test_cols_metrics
         )
 
         test_predictions_dfs.append(test_prediction_df)
@@ -476,9 +477,148 @@ def create_predictions_dataframe(test_predictions_log, label_columns):
     print(all_calls_df.head())
     return all_calls_df
 
-def create_test_fold_indices(labels_df, n_splits=5):
-    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-    labels_df['test_fold_idx'] = -1 
-    for fold_idx, (_, test_idx) in enumerate(skf.split(labels_df, labels_df['Site'])):
-        labels_df.loc[test_idx, 'test_fold_idx'] = fold_idx
-    return labels_df
+# def create_test_fold_indices(labels_df, n_splits=5):
+#     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+#     labels_df['test_fold_idx'] = -1 
+#     for fold_idx, (_, test_idx) in enumerate(skf.split(labels_df, labels_df['Site'])):
+#         labels_df.loc[test_idx, 'test_fold_idx'] = fold_idx
+#     return labels_df
+
+
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import StratifiedKFold
+
+def create_test_fold_indices(
+    labels_df: pd.DataFrame,
+    *,
+    n_splits: int = 5,
+    stratify_col: str = "Site",
+    group_col: str | None = None,  # <-- optional
+    random_state: int = 42,
+    out_col: str = "test_fold_idx",
+) -> pd.DataFrame:
+    """
+    If group_col is provided:
+      - non-NaN groups are kept together (avoid leakage) using StratifiedGroupKFold if available
+      - NaN rows are assigned individually (stratified-ish) while balancing fold sizes
+    If group_col is None:
+      - simple row-level StratifiedKFold (your original behavior)
+    """
+    df = labels_df.copy()
+    df[out_col] = -1
+
+    if stratify_col not in df.columns:
+        raise KeyError(f"stratify_col='{stratify_col}' not found in df.columns")
+    if group_col is not None and group_col not in df.columns:
+        raise KeyError(f"group_col='{group_col}' not found in df.columns")
+
+    rng = np.random.RandomState(random_state)
+
+    # ----------------------------
+    # Case A: no grouping -> original behavior
+    # ----------------------------
+    if group_col is None:
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+        for fold_idx, (_, test_idx) in enumerate(skf.split(df, df[stratify_col])):
+            df.iloc[test_idx, df.columns.get_loc(out_col)] = fold_idx
+        return df
+
+    # ----------------------------
+    # Case B: grouping enabled
+    # ----------------------------
+    mask_grouped = df[group_col].notna()
+    df_g = df[mask_grouped]
+    df_n = df[~mask_grouped]
+
+    # 1) Grouped (non-NaN)
+    if len(df_g) > 0:
+        try:
+            from sklearn.model_selection import StratifiedGroupKFold
+
+            sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+            for fold_idx, (_, test_idx_local) in enumerate(
+                sgkf.split(df_g, y=df_g[stratify_col].values, groups=df_g[group_col].values)
+            ):
+                df.loc[df_g.iloc[test_idx_local].index, out_col] = fold_idx
+
+        except Exception:
+            # Greedy fallback (balances class + total size)
+            y = df_g[stratify_col].astype(str).values
+            groups = df_g[group_col].astype(str).values
+            classes = np.unique(y)
+
+            group_to_idx = {}
+            group_to_counts = {}
+            for idx, (g, c) in zip(df_g.index, zip(groups, y)):
+                group_to_idx.setdefault(g, []).append(idx)
+                if g not in group_to_counts:
+                    group_to_counts[g] = {cl: 0 for cl in classes}
+                group_to_counts[g][c] += 1
+
+            total_counts = {cl: int((y == cl).sum()) for cl in classes}
+            target_per_fold = {cl: total_counts[cl] / n_splits for cl in classes}
+            target_size = len(df_g) / n_splits
+
+            fold_counts = [{cl: 0 for cl in classes} for _ in range(n_splits)]
+            fold_sizes = [0 for _ in range(n_splits)]
+
+            group_list = list(group_to_idx.keys())
+            group_list.sort(key=lambda g: len(group_to_idx[g]), reverse=True)
+
+            # shuffle ties deterministically
+            i = 0
+            while i < len(group_list):
+                j = i
+                sz = len(group_to_idx[group_list[i]])
+                while j < len(group_list) and len(group_to_idx[group_list[j]]) == sz:
+                    j += 1
+                if j - i > 1:
+                    chunk = group_list[i:j]
+                    rng.shuffle(chunk)
+                    group_list[i:j] = chunk
+                i = j
+
+            def fold_cost(k, g_counts, g_size):
+                cost = 0.0
+                for cl in classes:
+                    new_val = fold_counts[k][cl] + g_counts[cl]
+                    cost += (new_val - target_per_fold[cl]) ** 2
+                new_size = fold_sizes[k] + g_size
+                cost += 0.25 * (new_size - target_size) ** 2
+                return cost
+
+            for g in group_list:
+                g_idx = group_to_idx[g]
+                g_size = len(g_idx)
+                g_counts = group_to_counts[g]
+                best_fold = min(range(n_splits), key=lambda k: fold_cost(k, g_counts, g_size))
+
+                df.loc[g_idx, out_col] = best_fold
+                fold_sizes[best_fold] += g_size
+                for cl in classes:
+                    fold_counts[best_fold][cl] += g_counts[cl]
+
+    # 2) NaN rows: assign individually, balancing final fold sizes
+    if len(df_n) > 0:
+        current_sizes = df[out_col].value_counts().to_dict()
+        fold_sizes = [int(current_sizes.get(k, 0)) for k in range(n_splits)]
+
+        y_n = df_n[stratify_col].astype(str)
+        for cl in y_n.unique():
+            idxs = df_n.index[y_n == cl].to_numpy()
+            idxs = np.array(idxs, copy=True)  # <-- FIX: ensure writable for shuffle
+            rng.shuffle(idxs)
+
+            for idx in idxs:
+                min_size = min(fold_sizes)
+                candidates = [k for k, sz in enumerate(fold_sizes) if sz == min_size]
+                chosen = candidates[rng.randint(len(candidates))]
+                df.loc[idx, out_col] = chosen
+                fold_sizes[chosen] += 1
+
+    if (df[out_col] == -1).any():
+        missing = int((df[out_col] == -1).sum())
+        raise RuntimeError(f"{missing} rows were not assigned a fold (still -1).")
+
+    return df
