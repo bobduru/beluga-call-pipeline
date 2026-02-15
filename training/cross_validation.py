@@ -233,13 +233,13 @@ def train_model(
     # if compute_sites_metrics:   
     for test_col in test_cols_metrics:
         #Here we are evaluating the model on each site in the test set
+        labels_df[test_col] = labels_df[test_col].astype("string")
 
-        test_vals = list(set(labels_df["test_col"].unique()))
+        test_vals = list(set(labels_df[test_col].unique()))
         test_df = labels_df[labels_df["test_fold_idx"] == fold_idx]
 
         for test_val in test_vals:
-            test_val_df = test_df[test_df["test_col"] == test_val]
-
+            test_val_df = test_df[test_df[test_col] == test_val]
             if len(test_val_df) == 0:
                 print(f"No data for {test_col} {test_val}, skipping.")
                 continue
@@ -263,7 +263,7 @@ def train_model(
             test_prediction_df = create_predictions_dataframe(test_predictions_log, label_columns)
             test_prediction_df.to_csv(run_dir + f"{test_col}_{test_val}_test_predictions.csv", index=False)
 
-            test_name = test_col + "_" + test_val
+            test_name = test_col + "_" + str(test_val)
             training_details["other_tests"][test_name] = test_results
             
             if use_quantization:  
@@ -491,7 +491,6 @@ from sklearn.model_selection import StratifiedKFold
 
 def create_test_fold_indices(
     labels_df: pd.DataFrame,
-    *,
     n_splits: int = 5,
     stratify_col: str = "Site",
     group_col: str | None = None,  # <-- optional
