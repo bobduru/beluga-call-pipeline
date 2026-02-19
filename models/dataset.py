@@ -16,6 +16,7 @@ class MultiLabelDataset(torch.utils.data.Dataset):
         processed_spects_dir=None,
         label_columns=None,
         train=True,  # Parameter to control augmentation
+        use_augmentation=False,
         spect_filename_column='Filename',
     ): 
         self.df = df
@@ -24,10 +25,17 @@ class MultiLabelDataset(torch.utils.data.Dataset):
         
         self.label_columns = label_columns
         self.train = train  # Determines if augmentation is applied
+        self.use_augmentation = use_augmentation
         self.spect_filename_column = spect_filename_column
 
     def __len__(self):
         return len(self.df)
+
+    def augmentation(self, spect):
+        # Flip on the time axis (horizontal flip) 40% of the time
+        if random.random() < 0.4:
+            return torch.flip(spect, dims=[1])
+        return spect
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
@@ -38,6 +46,8 @@ class MultiLabelDataset(torch.utils.data.Dataset):
         file_path = self.processed_files_dir + filename
         spect = torch.load(file_path, weights_only=False)
         spect = torch.from_numpy(spect)
+        if self.train and self.use_augmentation:
+            spect = self.augmentation(spect)
         spect = spect.unsqueeze(0)  # Add channel dimension
 
         # Metadata stays the same
@@ -49,18 +59,20 @@ class MultiLabelDataset(torch.utils.data.Dataset):
         return spect, labels, metadata
     
 
-def setup_multilabel_dataloaders(train_data, val_data, test_data, processed_spects_dir, label_columns, batch_size=32):
+def setup_multilabel_dataloaders(train_data, val_data, test_data, processed_spects_dir, label_columns, batch_size=32, use_augmentation=False):
     train_dataset = MultiLabelDataset(
         train_data,
         processed_spects_dir=processed_spects_dir,
         label_columns=label_columns,
         train=True,
+        use_augmentation=use_augmentation,
         spect_filename_column='ClipFilenamePt'
     )
     val_dataset = MultiLabelDataset(
         val_data,
         processed_spects_dir=processed_spects_dir,
        label_columns=label_columns,
+       train=False,
         spect_filename_column='ClipFilenamePt'
 
     )
@@ -68,6 +80,7 @@ def setup_multilabel_dataloaders(train_data, val_data, test_data, processed_spec
         test_data,
         processed_spects_dir=processed_spects_dir,
         label_columns=label_columns,
+        train=False,
         spect_filename_column='ClipFilenamePt'
     )
     

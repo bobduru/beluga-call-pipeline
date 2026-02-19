@@ -51,7 +51,8 @@ def train_model(
         save_models=False,
         base_dir=None,
         # compute_sites_metrics=True,
-        test_cols_metrics=["Site"]
+        test_cols_metrics=["Site"],
+        use_augmentation=False,
 ):
 
     """
@@ -145,10 +146,10 @@ def train_model(
 
     # Creating run directory
     if base_dir is None:
-        base_dir = f"{results_dir}/{run_name}"
+        base_dir = f"{results_dir}/{run_name}/"
 
     if fold_idx is not None:
-        run_dir = f"{base_dir}/fold_{fold_idx}/"
+        run_dir = f"{base_dir}fold_{fold_idx}/"
     else:
         run_dir = base_dir
     os.makedirs(run_dir, exist_ok=True)
@@ -175,7 +176,7 @@ def train_model(
     )
 
     trainer = MultilabelTrainer(model, device=device, labels_mapping=label_columns)
-    train_loader, val_loader, test_loader = setup_multilabel_dataloaders(train_data, val_data, test_data, processed_spects_dir, label_columns)
+    train_loader, val_loader, test_loader = setup_multilabel_dataloaders(train_data, val_data, test_data, processed_spects_dir, label_columns, use_augmentation=use_augmentation)
 
     # Training the model
     trained_model, training_details, test_predictions_log = trainer.fit(
@@ -236,7 +237,10 @@ def train_model(
         labels_df[test_col] = labels_df[test_col].astype("string")
 
         test_vals = list(set(labels_df[test_col].unique()))
-        test_df = labels_df[labels_df["test_fold_idx"] == fold_idx]
+        if "test_fold_idx" in labels_df.columns:
+            test_df = labels_df[labels_df["test_fold_idx"] == fold_idx]
+        else:
+            test_df = labels_df
 
         for test_val in test_vals:
             test_val_df = test_df[test_df[test_col] == test_val]
@@ -292,7 +296,9 @@ def run_cross_val(
     use_quantization=False, 
     results_dir="./final_results",
     test_cols_metrics=["Site"],
-    fold_exclusive_col="labeled_snippet_filename"
+    fold_exclusive_col="labeled_snippet_filename",
+    use_augmentation=False,
+    stratify_cols=None,
 ):
     """""
     
@@ -369,8 +375,9 @@ def run_cross_val(
 
 
     # Create test fold indices where each site has the same number of test samples
-    labels_df = create_test_fold_indices(labels_df, n_splits, group_col=fold_exclusive_col)
-
+    labels_df = create_test_fold_indices(labels_df, n_splits=n_splits, group_col=fold_exclusive_col, stratify_cols=stratify_cols)
+    print(labels_df.groupby(['test_fold_idx', 'Site']).size())
+    print(labels_df.groupby(['test_fold_idx', 'Boat']).size())
 
     for fold_idx in range(n_splits):
         model = model_class(num_classes=len(label_columns), **model_kwargs)
@@ -401,7 +408,8 @@ def run_cross_val(
             training_config=training_config,
             use_quantization=use_quantization,
             save_models=save_models,
-            test_cols_metrics=test_cols_metrics
+            test_cols_metrics=test_cols_metrics,
+            use_augmentation=use_augmentation,
         )
 
         test_predictions_dfs.append(test_prediction_df)
@@ -491,9 +499,11 @@ from sklearn.model_selection import StratifiedKFold
 
 def create_test_fold_indices(
     labels_df: pd.DataFrame,
+    *,
     n_splits: int = 5,
     stratify_col: str = "Site",
-    group_col: str | None = None,  # <-- optional
+    stratify_cols: list[str] | None = None,  # NEW: multiple stratification columns
+    group_col: str | None = None,
     random_state: int = 42,
     out_col: str = "test_fold_idx",
 ) -> pd.DataFrame:
@@ -503,12 +513,32 @@ def create_test_fold_indices(
       - NaN rows are assigned individually (stratified-ish) while balancing fold sizes
     If group_col is None:
       - simple row-level StratifiedKFold (your original behavior)
+    
+    NEW: stratify_cols allows stratifying on multiple columns simultaneously
     """
     df = labels_df.copy()
     df[out_col] = -1
 
-    if stratify_col not in df.columns:
-        raise KeyError(f"stratify_col='{stratify_col}' not found in df.columns")
+    # Handle multiple stratification columns
+    if stratify_cols is not None:
+        # Create combined stratification column (element-wise)
+        for col in stratify_cols:
+            if col not in df.columns:
+                raise KeyError(f"stratify_col='{col}' not found in df.columns")
+        
+        # Combine columns element-wise by building string progressively
+        # Convert to string first (handles all dtypes), then replace 'nan' string
+        df['_combined_strat'] = df[stratify_cols[0]].fillna('__NA__').astype(str)
+        for col in stratify_cols[1:]:
+            df['_combined_strat'] = df['_combined_strat'] + '_' + df[col].fillna('__NA__').astype(str)
+        
+        effective_stratify_col = '_combined_strat'
+    else:
+        # Single stratification column (backward compatible)
+        if stratify_col not in df.columns:
+            raise KeyError(f"stratify_col='{stratify_col}' not found in df.columns")
+        effective_stratify_col = stratify_col
+    
     if group_col is not None and group_col not in df.columns:
         raise KeyError(f"group_col='{group_col}' not found in df.columns")
 
@@ -519,8 +549,12 @@ def create_test_fold_indices(
     # ----------------------------
     if group_col is None:
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-        for fold_idx, (_, test_idx) in enumerate(skf.split(df, df[stratify_col])):
+        for fold_idx, (_, test_idx) in enumerate(skf.split(df, df[effective_stratify_col])):
             df.iloc[test_idx, df.columns.get_loc(out_col)] = fold_idx
+        
+        # Clean up temporary column
+        if stratify_cols is not None:
+            df = df.drop(columns=['_combined_strat'])
         return df
 
     # ----------------------------
@@ -537,13 +571,14 @@ def create_test_fold_indices(
 
             sgkf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
             for fold_idx, (_, test_idx_local) in enumerate(
-                sgkf.split(df_g, y=df_g[stratify_col].values, groups=df_g[group_col].values)
+                sgkf.split(df_g, y=df_g[effective_stratify_col].values, groups=df_g[group_col].values)
             ):
                 df.loc[df_g.iloc[test_idx_local].index, out_col] = fold_idx
 
-        except Exception:
+        except Exception as e:
             # Greedy fallback (balances class + total size)
-            y = df_g[stratify_col].astype(str).values
+            print(f"StratifiedGroupKFold failed: {e}, using greedy fallback")
+            y = df_g[effective_stratify_col].astype(str).values
             groups = df_g[group_col].astype(str).values
             classes = np.unique(y)
 
@@ -603,10 +638,10 @@ def create_test_fold_indices(
         current_sizes = df[out_col].value_counts().to_dict()
         fold_sizes = [int(current_sizes.get(k, 0)) for k in range(n_splits)]
 
-        y_n = df_n[stratify_col].astype(str)
+        y_n = df_n[effective_stratify_col].astype(str)
         for cl in y_n.unique():
             idxs = df_n.index[y_n == cl].to_numpy()
-            idxs = np.array(idxs, copy=True)  # <-- FIX: ensure writable for shuffle
+            idxs = np.array(idxs, copy=True)
             rng.shuffle(idxs)
 
             for idx in idxs:
@@ -618,6 +653,21 @@ def create_test_fold_indices(
 
     if (df[out_col] == -1).any():
         missing = int((df[out_col] == -1).sum())
+        print(f"Missing rows debug info:")
+        print(f"Total rows: {len(df)}")
+        print(f"Grouped rows (df_g): {len(df_g) if 'df_g' in locals() and len(df_g) > 0 else 0}")
+        print(f"Non-grouped rows (df_n): {len(df_n) if 'df_n' in locals() and len(df_n) > 0 else 0}")
+        print(f"Rows with fold assigned: {(df[out_col] != -1).sum()}")
+        if group_col:
+            print(f"\nUnassigned rows sample:")
+            print(df[df[out_col] == -1][[group_col, effective_stratify_col]].head(10))
+        else:
+            print(f"\nUnassigned rows sample:")
+            print(df[df[out_col] == -1][[effective_stratify_col]].head(10))
         raise RuntimeError(f"{missing} rows were not assigned a fold (still -1).")
 
+    # Clean up temporary column
+    if stratify_cols is not None:
+        df = df.drop(columns=['_combined_strat'])
+    
     return df
