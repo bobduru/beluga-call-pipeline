@@ -158,7 +158,7 @@ def train_model(
     # Setting up everything for training
     device = get_best_device()
     cpu = torch.device("cpu")
-    weights = [1,1,1,1]
+    weights = np.ones(len(label_columns))
     loss_fn_gpu = nn.BCEWithLogitsLoss(reduction="sum", pos_weight=torch.tensor(weights).to(device))
     metrics_gpu = get_metrics(len(label_columns), device)
 

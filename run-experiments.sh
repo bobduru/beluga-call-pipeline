@@ -10,4 +10,4 @@
 uv sync
 
 # run training using the allocated GPU
-srun uv run training/run_optimization_3sec.py
+srun uv run training/run_optimization.py

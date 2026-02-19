@@ -8,6 +8,7 @@ aves-base-bio.pt
 media
 results
 results_acoustic
+new_results
 
 call_predictions_labeled_abundance.csv
 predictions.csv

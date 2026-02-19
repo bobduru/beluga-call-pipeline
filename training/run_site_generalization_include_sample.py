@@ -37,10 +37,10 @@ training_config_default = {
     "batch_size": 32,
     "lr_decay_factor": 0.5,
     "patience_lr": 2,
-    "n_epochs": 1, #100
-    "min_epochs": 0, #15
-    # "n_epochs": 100, #100
-    # "min_epochs": 10, #15
+    # "n_epochs": 1, #100
+    # "min_epochs": 0, #15
+    "n_epochs": 100, #100
+    "min_epochs": 10, #15
     "patience_early_stopping": 5,
     "metric_mode": "max",
     "val_metric": "f1",
@@ -60,11 +60,11 @@ from models.utils import aggregate_folds_testing_metrics
 ########################################################
 
 
-# all_sites = ["BSM", "RDL", "CAC", "KAM" ]
-all_sites = ["BSM","CAC", "KAM" ]
+all_sites = ["BSM", "RDL", "CAC", "KAM" ]
+# all_sites = ["BSM","CAC", "KAM" ]
 
 # quantization_options = [False, True]
-quantization_options = [False]
+quantization_options = [False, True]
 
 max_sample_size = 500
 sample_sizes = [0, 100, 200, 300, 400, max_sample_size]
@@ -87,7 +87,31 @@ for use_quantization in quantization_options:
         test_site_df = labels_df[labels_df["Site"] == out_site]
 
         if len(test_site_df) > max_sample_size:
-            test_site_train_sample = test_site_df.sample(n=max_sample_size, random_state=42)
+            # test_site_train_sample = test_site_df.sample(n=max_sample_size, random_state=42)
+
+            # desired split
+            p_call_1 = 0.60
+            p_call_0 = 0.40
+
+            n_call_1 = int(max_sample_size * p_call_1)
+            n_call_0 = max_sample_size - n_call_1  # avoids rounding issues
+
+            # split by class
+            df_call_1 = test_site_df[test_site_df["Call"] == 1]
+            df_call_0 = test_site_df[test_site_df["Call"] == 0]
+
+            # sample each group
+            sample_call_1 = df_call_1.sample(n=n_call_1, random_state=42)
+            sample_call_0 = df_call_0.sample(n=n_call_0, random_state=42)
+
+            # combine and shuffle
+            test_site_train_sample = (
+                pd.concat([sample_call_1, sample_call_0])
+            )
+
+            print("test site train sample class distribution:")
+            print(test_site_train_sample["Call"].value_counts())
+
             test_data = test_site_df.drop(test_site_train_sample.index)
         else:
             print(f"ERROR: Test site {out_site} has less than {max_sample_size} samples")
@@ -116,7 +140,7 @@ for use_quantization in quantization_options:
             print("\nVal df")
             print(val_data["Site"].value_counts())
 
-            results_dir = f"./training/results/sites_generalization_include_sample/"
+            results_dir = f"./training/new_results/sites_generalization_include_sample_last/"
 
             # break
             run_dir, _, _ = train_model(
@@ -133,7 +157,7 @@ for use_quantization in quantization_options:
                 training_config=training_config_default,
                 use_quantization=use_quantization,
                 use_augmentation=False,
-                test_cols_metrics=[],
+                test_cols_metrics=["Boat"],
             )
 
             cur_sample.to_csv(f"{results_dir}/{run_name}/test_site_train_sample.csv", index=False)
