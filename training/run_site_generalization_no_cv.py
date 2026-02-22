@@ -27,6 +27,8 @@ processed_spects_dir = data_dir + "/Verified_Dataset/spectrograms/"
 
 results_dir = "training/results/"
 
+labels_df = labels_df[labels_df["Boat"] != 1]
+
 # labels_df["Boat"] = labels_df["Boat"].astype("boolean")
 labels_df["Site_B"] = (
     labels_df["Site"] + "_B_" + labels_df["Boat"].astype("string")
@@ -62,7 +64,8 @@ from models.utils import aggregate_folds_testing_metrics
 
 all_sites = ["BSM", "RDL", "CAC", "KAM" ]
 
-quantization_options = [False, True]
+# quantization_options = [False, True]
+quantization_options = [False]
 
 for use_quantization in quantization_options:
 
@@ -110,7 +113,7 @@ for use_quantization in quantization_options:
             processed_spects_dir=processed_spects_dir,
             fold_idx=None,
             run_name=run_name,
-            results_dir=f"./training/results/sites_generalization_no_cv",
+            results_dir=f"./training/results/sites_generalization_no_cv_no_boat",
             training_config=training_config_default,
             use_quantization=use_quantization,
             use_augmentation=False,
