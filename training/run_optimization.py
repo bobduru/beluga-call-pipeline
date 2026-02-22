@@ -26,8 +26,9 @@ processed_spects_dir = data_dir + "/Verified_Dataset/spectrograms/"
 
 results_dir = "training/new_results/optimization_last"
 
+labels_df["Boat"] = labels_df["Boat"].fillna(0)
 # labels_df["Boat"] = labels_df["Boat"].astype("boolean")
-labels_df["Site_B"] = (
+labels_df["Site_Boat"] = (
     labels_df["Site"] + "_B_" + labels_df["Boat"].astype("string")
 ).where(labels_df["Boat"].notna(), pd.NA)
 
@@ -47,26 +48,27 @@ training_config_default = {
 }
 use_augmentation = False
 
-run_cross_val(
-    labels_df, 
-    label_columns, 
-    ResnetMultilabel,  
-    processed_spects_dir,
-    run_name="resnet",
-    results_dir=results_dir,
-    model_kwargs={
-        "pretrained":True,
-    }, 
-    training_config=training_config_default,
-    save_models=True,
-    use_quantization=False,
-    test_cols_metrics=["Site", "Boat"],
-    fold_exclusive_col="labeled_snippet_filename",
-    use_augmentation=use_augmentation,
-)
+# run_cross_val(
+#     labels_df, 
+#     label_columns, 
+#     ResnetMultilabel,  
+#     processed_spects_dir,
+#     run_name="resnet",
+#     results_dir=results_dir,
+#     model_kwargs={
+#         "pretrained":True,
+#     }, 
+#     training_config=training_config_default,
+#     save_models=True,
+#     use_quantization=False,
+#     test_cols_metrics=["Site", "Boat"],
+#     fold_exclusive_col="labeled_snippet_filename",
+#     use_augmentation=use_augmentation,
+# )
 
 
-n_layers_to_test = [8, 10, 12, 6, 4]  
+# n_layers_to_test = [8, 10, 12, 6, 4]  
+n_layers_to_test = [8, 12]  
 # n_layers_to_test = [2, 4, 6, 8, 10, 12,]  
 # quantization_options = [False,True]
 quantization_options = [False, True]

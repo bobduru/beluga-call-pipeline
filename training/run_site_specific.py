@@ -26,7 +26,6 @@ data_dir = "data"
 processed_spects_dir = data_dir + "/Verified_Dataset/spectrograms/"
 
 results_dir = "training/results/"
-labels_df = labels_df[labels_df["Boat"] != 1]
 
 # labels_df["Boat"] = labels_df["Boat"].astype("boolean")
 labels_df["Site_B"] = (
@@ -57,18 +56,17 @@ from models.utils import aggregate_folds_testing_metrics
 labels_df = create_test_fold_indices(labels_df, n_splits=5, group_col="labeled_snippet_filename", stratify_cols=["Site", "Boat"],)
 
 ########################################################
-# LEAVE ONE SITE OUT
+# SITE SPECIFIC
 ########################################################
+all_sites = ["RDL", "CAC", "BSM", "KAM" ]
 
+use_quantization = False
+quantization_options = [False, True]
 
-all_sites = ["BSM", "RDL", "CAC", "KAM" ]
-
-# quantization_options = [False, True]
-quantization_options = [False]
 
 for use_quantization in quantization_options:
+    for train_site in all_sites:
 
-    for out_site in all_sites:
         for fold_idx in range(5):
             
             model_class = load_mobilenet_v3_quant if use_quantization else MobileNetMultilabel
@@ -79,29 +77,17 @@ for use_quantization in quantization_options:
                 num_classes=len(label_columns)
             )
 
-            train_sites = [site for site in all_sites if site != out_site]
-
-            train_df = labels_df[labels_df["test_fold_idx"] != fold_idx]
+            train_site_df = labels_df[labels_df["Site"]==train_site]
+            train_data = train_site_df[train_site_df["test_fold_idx"] != fold_idx]
+            train_data, val_data = train_test_split(train_data, test_size=0.2, random_state=42, stratify=train_data['Site'])
             
-            train_sites_df = train_df[train_df["Site"].isin(train_sites)]
+            test_data = train_site_df[train_site_df["test_fold_idx"] == fold_idx]
 
-            train_data, val_data = train_test_split(train_sites_df, test_size=0.2, random_state=42, stratify=train_sites_df['Site'])
-            
-            test_data = labels_df[labels_df["test_fold_idx"] == fold_idx]
-
-
-            run_name = f"leave_{out_site}_out"
+            run_name = f"{train_site}_only"
             if use_quantization:
                 run_name = run_name + "_qat"
 
-            print(run_name)
-            print(f"Site out : {out_site}")
-            print("Train df")
-            print(train_data["Site"].value_counts())
-            print("\nVal df")
-            print(val_data["Site"].value_counts())
 
-            # break
             run_dir, _, _ = train_model(
                 labels_df,
                 label_columns,
@@ -111,16 +97,12 @@ for use_quantization in quantization_options:
                 test_data,
                 processed_spects_dir=processed_spects_dir,
                 fold_idx=fold_idx,
+                results_dir="./training/new_results/sites_generalization_cv",
                 run_name=run_name,
-                results_dir=f"./training/new_results/sites_generalization_cv_no_boat",
                 training_config=training_config_default,
                 use_quantization=use_quantization,
-                use_augmentation=False,
-                
                 test_cols_metrics=["Site", "Boat"],
-                
+                use_augmentation=False,
             )
-        
-        aggregate_folds_testing_metrics(run_dir)
 
-    # break
+        aggregate_folds_testing_metrics(run_dir)
