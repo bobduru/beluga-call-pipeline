@@ -50,8 +50,9 @@ def train_model(
         use_quantization=False,
         save_models=False,
         base_dir=None,
-        # compute_sites_metrics=True,
         test_cols_metrics=["Site"],
+        use_labels_df_for_testing=True, #Used for leave one site out 
+
         use_augmentation=False,
 ):
 
@@ -232,18 +233,26 @@ def train_model(
         training_details["other_tests"]["quantized"] = quant_test_results
 
     # if compute_sites_metrics:   
-    for test_col in test_cols_metrics:
-        #Here we are evaluating the model on each site in the test set
-        labels_df[test_col] = labels_df[test_col].astype("string")
 
-        test_vals = list(set(labels_df[test_col].unique()))
-        if "test_fold_idx" in labels_df.columns:
-            test_df = labels_df[labels_df["test_fold_idx"] == fold_idx]
+    
+    for test_col in test_cols_metrics:
+        
+        if use_labels_df_for_testing:
+            other_tests_df = labels_df
         else:
-            test_df = labels_df
+            other_tests_df = test_data
+
+        #Here we are evaluating the model on each site in the test set
+        other_tests_df[test_col] = other_tests_df[test_col].astype("string")
+
+        test_vals = list(set(other_tests_df[test_col].unique()))
+        # if "test_fold_idx" in other_tests_df.columns:
+        #     test_df = other_tests_df[other_tests_df["test_fold_idx"] == fold_idx]
+        # else:
+        #     test_df = other_tests_df
 
         for test_val in test_vals:
-            test_val_df = test_df[test_df[test_col] == test_val]
+            test_val_df = other_tests_df[other_tests_df[test_col] == test_val]
             if len(test_val_df) == 0:
                 print(f"No data for {test_col} {test_val}, skipping.")
                 continue
@@ -296,6 +305,7 @@ def run_cross_val(
     use_quantization=False, 
     results_dir="./final_results",
     test_cols_metrics=["Site"],
+    use_labels_df_for_testing= True,
     fold_exclusive_col="labeled_snippet_filename",
     use_augmentation=False,
     stratify_cols=None,
@@ -409,6 +419,7 @@ def run_cross_val(
             use_quantization=use_quantization,
             save_models=save_models,
             test_cols_metrics=test_cols_metrics,
+            use_labels_df_for_testing=use_labels_df_for_testing,
             use_augmentation=use_augmentation,
         )
 

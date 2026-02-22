@@ -30,7 +30,8 @@ def plot_pipeline_outputs_on_spects(
     figsize=(20, 4),
     start_time_ticks_0=False,
     show_title=True,
-    show_probabilities=False
+    show_probabilities=False,
+    dpi=300
 ):
     """
     Plots the pipeline results on long spectrogram chunks of the processed audio. If we have access to ground truth labels, it can also plot them.
@@ -64,7 +65,7 @@ def plot_pipeline_outputs_on_spects(
         else:
             time_axis = np.linspace(start_sec, end_sec, n_frames)
 
-        fig, ax = plt.subplots(figsize=figsize)  # increase height a bit
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
         fig.patch.set_alpha(0.0)  # Make figure background transparent
         ax.patch.set_alpha(0.0)
         
